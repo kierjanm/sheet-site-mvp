@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title id="pageTitle">Loading…</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 920px; margin: 40px auto; padding: 0 16px; }
+    .wrap { display: grid; gap: 18px; }
+    .card { padding: 22px; border: 1px solid #e5e5e5; border-radius: 14px; }
+    .muted { color:#666; }
+    .btn { display:inline-block; padding:12px 16px; border-radius:12px; border:1px solid #111; text-decoration:none; }
+    .grid { display:grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 740px) { .grid { grid-template-columns: 1fr 1fr; } }
+    ul { line-height: 1.9; padding-left: 18px; }
+    code { background:#f6f6f6; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1 id="businessName">Loading…</h1>
+      <p class="muted" id="address"></p>
+
+      <h2 id="headline"></h2>
+      <p class="muted" id="subheadline"></p>
+
+      <div class="grid">
+        <div>
+          <p><strong>Hours:</strong> <span id="hours"></span></p>
+          <p><strong>Phone:</strong> <a id="phoneLink" href="#"><span id="phone"></span></a></p>
+          <p><strong>Email:</strong> <a id="emailLink" href="#"><span id="email"></span></a></p>
+        </div>
+        <div>
+          <h3 style="margin-top:0;">Services</h3>
+          <ul id="services"></ul>
+        </div>
+      </div>
+
+      <p style="margin-top: 16px;">
+        <a class="btn" id="ctaBtn" href="#" target="_blank">Loading…</a>
+      </p>
+
+      <p class="muted" id="status"></p>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;">How to update</h3>
+      <p class="muted">
+        Edit the Google Sheet values (hours, services, prices). Refresh this page to see changes.
+      </p>
+      <p class="muted">
+        Data source: <code id="apiUrl"></code>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // ✅ Paste your Apps Script Web App URL (must be the /exec URL)
+    const API_URL = "https://script.google.com/macros/s/AKfycbx9fW5_RIYUbXyabG2qVlj3STYeZPZ2T6PH8mbnyVKEWTJvnfFy0cfn-DnhZGecaUAHLw/exec";
+
+    document.getElementById("apiUrl").textContent = API_URL;
+
+    function splitServices(text) {
+      if (!text) return [];
+      return text.split(",").map(s => s.trim()).filter(Boolean);
+    }
+
+    async function loadContent() {
+      const status = document.getElementById("status");
+      try {
+        status.textContent = "Loading content from Google Sheet…";
+
+        // cache-buster so changes show immediately after edits
+        const res = await fetch(API_URL + "?t=" + Date.now(), { method: "GET" });
+        if (!res.ok) throw new Error("API request failed: " + res.status);
+
+        const data = await res.json();
+
+        const bn = data.business_name || "Business Name";
+        document.getElementById("businessName").textContent = bn;
+        document.getElementById("pageTitle").textContent = bn;
+
+        document.getElementById("headline").textContent = data.hero_headline || "";
+        document.getElementById("subheadline").textContent = data.hero_subheadline || "";
+        document.getElementById("address").textContent = data.address || "";
+        document.getElementById("hours").textContent = data.hours || "";
+
+        document.getElementById("phone").textContent = data.phone || "";
+        document.getElementById("phoneLink").href = "tel:" + (data.phone || "").replace(/[^\d+]/g, "");
+
+        document.getElementById("email").textContent = data.email || "";
+        document.getElementById("emailLink").href = "mailto:" + (data.email || "");
+
+        const servicesEl = document.getElementById("services");
+        servicesEl.innerHTML = "";
+        splitServices(data.services).forEach(s => {
+          const li = document.createElement("li");
+          li.textContent = s;
+          servicesEl.appendChild(li);
+        });
+
+        const ctaBtn = document.getElementById("ctaBtn");
+        ctaBtn.textContent = data.cta_text || "Contact Us";
+        ctaBtn.href = data.cta_link || "#";
+
+        status.textContent = "Loaded ✅ Edit the sheet → refresh page to see updates.";
+      } catch (err) {
+        status.textContent = "Error: " + err.message;
+      }
+    }
+
+    loadContent();
+  </script>
+</body>
+</html>
